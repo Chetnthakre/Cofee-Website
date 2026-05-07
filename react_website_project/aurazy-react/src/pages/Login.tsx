@@ -1,22 +1,32 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { signIn } from '../api';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get the redirect path from location state, or default to home
   const from = (location.state as any)?.from?.pathname || "/profile";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && password) {
-      await login(email, password);
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const { data } = await signIn({ email, password });
+      login(data, data.token);
       navigate(from, { replace: true });
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -25,6 +35,8 @@ const Login: React.FC = () => {
       <div className="login-card">
         <h2>LOGIN</h2>
         <p>Please enter your details to continue.</p>
+        
+        {error && <p style={{ color: 'red', marginBottom: '1rem' }}>{error}</p>}
         
         <form onSubmit={handleSubmit}>
           <div className="input-group">
@@ -51,11 +63,13 @@ const Login: React.FC = () => {
             />
           </div>
 
-          <button type="submit" className="btn login-btn">SIGN IN</button>
+          <button type="submit" className="btn login-btn" disabled={isLoading}>
+            {isLoading ? 'SIGNING IN...' : 'SIGN IN'}
+          </button>
         </form>
 
         <div className="login-footer">
-          <p>Don't have an account? <a href="#">Create one</a></p>
+          <p>Don't have an account? <Link to="/register">Create one</Link></p>
           <a href="#" className="forgot-password">Forgot password?</a>
         </div>
       </div>

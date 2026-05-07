@@ -1,37 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { PRODUCTS } from './Collection';
+import { useParams, useNavigate  } from 'react-router-dom';
+import { fetchProducts } from '../api';
 import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
+ 
   const { addToCart } = useCart();
-  const { isLoggedIn } = useAuth();
+ 
   
-  const product = PRODUCTS.find(p => p.id === Number(id));
-
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState('L');
   const [quantity, setQuantity] = useState(1);
 
+  const BASE_URL = 'https://aurazy-backend-2.onrender.com';
+
   useEffect(() => {
+    const loadProduct = async () => {
+      try {
+        const { data } = await fetchProducts();
+        const found = data.find((p: any) => p._id === id);
+        setProduct(found);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProduct();
     window.scrollTo(0, 0);
-  }, []);
+  }, [id]);
+
+  if (loading) {
+    return <div className="section__container">Loading...</div>;
+  }
 
   if (!product) {
     return <div className="section__container">Product not found.</div>;
   }
 
   const handleAddToCart = () => {
-    if (!isLoggedIn) {
-      navigate('/login', { state: { from: location } });
-      return;
-    }
-    
     addToCart({
-      id: product.id,
+      id: product._id,
       name: product.name,
       price: product.newPrice,
       size: selectedSize,
@@ -41,15 +54,36 @@ const ProductDetail: React.FC = () => {
   };
 
   const handleBuyNow = () => {
-    handleAddToCart();
-    window.location.href = "#"; 
+    navigate("/checkout", {
+      state: {
+        product: {
+          id: product._id,
+          name: product.name,
+          price: product.newPrice,
+          size: selectedSize,
+          quantity: quantity,
+          image: product.image
+        }
+      }
+    });
   };
+
 
   return (
     <div className="product-page">
-      <div className="product-wrapper">
+      <div className="section__container product-wrapper">
         <div className="product-images">
-          <img src={product.image} alt={product.name} />
+
+<img
+  src={
+    product.image?.startsWith("http")
+      ? product.image
+      : `${BASE_URL}${product.image}`
+  }
+  alt={product.name}
+/>
+
+
         </div>
 
         <div className="product-info">
@@ -61,10 +95,11 @@ const ProductDetail: React.FC = () => {
           </div>
           <p className="tax">Tax included.</p>
 
+
           <div className="option-block">
             <div className="option-header">
               <span>Size: <strong>{selectedSize}</strong></span>
-              <a href="#">Size Guide</a>
+              <a href="#" style={{ textDecoration: 'underline', fontSize: '0.9rem' }}>Size Guide</a>
             </div>
             <div className="size-options">
               {['S', 'M', 'L', 'XL', 'XXL'].map(size => (
@@ -80,10 +115,10 @@ const ProductDetail: React.FC = () => {
           </div>
 
           <div className="option-block">
-            <p>Quantity</p>
+            <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Quantity</p>
             <div className="qty-box">
               <button onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
-              <span id="qty-value">{quantity}</span>
+              <span>{quantity}</span>
               <button onClick={() => setQuantity(q => q + 1)}>+</button>
             </div>
           </div>

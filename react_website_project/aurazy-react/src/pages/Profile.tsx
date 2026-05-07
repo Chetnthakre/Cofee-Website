@@ -1,24 +1,39 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { fetchMyOrders } from '../api';
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isLoggedIn, logout } = useAuth();
+  const { user, isLoggedIn, logout, loading: authLoading } = useAuth();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!authLoading && !isLoggedIn) {
       navigate('/login');
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, authLoading, navigate]);
 
+  useEffect(() => {
+    const getOrders = async () => {
+      try {
+        const { data } = await fetchMyOrders();
+        setOrders(data);
+      } catch (err) {
+        console.error("Failed to fetch orders", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isLoggedIn) {
+      getOrders();
+    }
+  }, [isLoggedIn]);
+
+  if (authLoading) return <div className="section__container">Loading...</div>;
   if (!user) return null;
-
-  // Mock data
-  const orders = [
-    { id: "#ORD-101", date: "20 Feb 2025", status: "Delivered", total: "₹1,499" },
-    { id: "#ORD-105", date: "24 Feb 2025", status: "Processing", total: "₹699" },
-  ];
 
   const handleLogout = () => {
     logout();
@@ -36,23 +51,32 @@ const Profile: React.FC = () => {
           </div>
           <h3>{user.name}</h3>
           <p className="email">{user.email}</p>
-          <p className="joined">Member since: January 2025</p>
+          <p className="joined">Member of Aurazy</p>
           <button className="btn logout-btn" onClick={handleLogout}>LOGOUT</button>
         </div>
 
         <div className="orders-section">
           <h3>Recent Orders</h3>
-          {orders.length > 0 ? (
+          {loading ? (
+            <p>Loading orders...</p>
+          ) : orders.length > 0 ? (
             <div className="orders-list">
               {orders.map(order => (
-                <div key={order.id} className="order-card">
+                <div key={order._id} className="order-card">
                   <div className="order-header">
-                    <strong>{order.id}</strong>
-                    <span>{order.date}</span>
+                    <strong>Order #{order._id.slice(-6).toUpperCase()}</strong>
+                    <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="order-items">
+                     {order.items.map((item: any, idx: number) => (
+                       <div key={idx} className="order-item-mini">
+                          {item.name} (x{item.quantity})
+                       </div>
+                     ))}
                   </div>
                   <div className="order-details">
                     <span>Status: <span className={`status ${order.status.toLowerCase()}`}>{order.status}</span></span>
-                    <strong>{order.total}</strong>
+                    <strong>₹ {order.totalPrice}</strong>
                   </div>
                 </div>
               ))}
@@ -111,6 +135,12 @@ const Profile: React.FC = () => {
         .logout-btn {
           width: 100%;
           background: #ff4d4d;
+          color: white;
+          border: none;
+          padding: 10px;
+          border-radius: 5px;
+          cursor: pointer;
+          font-weight: 600;
         }
 
         .logout-btn:hover {
@@ -143,14 +173,21 @@ const Profile: React.FC = () => {
           margin-bottom: 0.5rem;
         }
 
+        .order-items {
+          font-size: 0.9rem;
+          color: #555;
+          margin-bottom: 0.5rem;
+        }
+
         .order-details {
           display: flex;
           justify-content: space-between;
           align-items: center;
         }
 
-        .status.delivered { color: #28a745; }
-        .status.processing { color: #ffc107; }
+        .status.paid { color: #28a745; }
+        .status.pending { color: #ffc107; }
+        .status.failed { color: #dc3545; }
 
         @media (max-width: 768px) {
           .profile-grid {

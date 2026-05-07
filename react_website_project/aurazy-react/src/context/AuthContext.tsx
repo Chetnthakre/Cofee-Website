@@ -1,45 +1,71 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { fetchUserProfile } from '../api';
 
 interface User {
+  _id: string;
   name: string;
   email: string;
+  isAdmin?: boolean;
 }
 
 interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
-  login: (email: string, name: string) => void;
+  loading: boolean;
+  login: (userData: User, token: string) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    return localStorage.getItem('isLoggedIn') === 'true';
-  });
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const login = (email: string, name: string) => {
-    const newUser = { email, name };
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('token');
+      const savedUser = localStorage.getItem('user');
+
+      if (token && savedUser) {
+        setIsLoggedIn(true);
+        setUser(JSON.parse(savedUser));
+        
+        // Optionally verify token/refresh user data from backend
+        try {
+          const { data } = await fetchUserProfile();
+          setUser(data);
+          localStorage.setItem('user', JSON.stringify(data));
+        } catch (err) {
+          console.error("Session expired or invalid token", err);
+          logout();
+        }
+      }
+      setLoading(false);
+    };
+
+    initializeAuth();
+  }, []);
+
+  const login = (userData: User, token: string) => {
     setIsLoggedIn(true);
-    setUser(newUser);
+    setUser(userData);
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('user', JSON.stringify(newUser));
   };
 
   const logout = () => {
     setIsLoggedIn(false);
     setUser(null);
-    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('isLoggedIn');
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, user, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

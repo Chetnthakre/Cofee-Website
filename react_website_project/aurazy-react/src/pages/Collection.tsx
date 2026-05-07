@@ -1,13 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-
-// Mock Assets
-import arrival1 from '../assets/IMG_2689.PNG';
-import arrival2 from '../assets/IMG_2690.PNG';
-import arrival3 from '../assets/IMG_2692.PNG';
+import { fetchProducts } from '../api';
 
 interface Product {
-  id: number;
+  _id: string;
   name: string;
   oldPrice: number;
   newPrice: number;
@@ -18,20 +14,11 @@ interface Product {
   bestSelling: number;
 }
 
-const PRODUCTS: Product[] = [
-  { id: 1, name: "Jodha Peplum Kurti – A Jaipur Dream", oldPrice: 1299, newPrice: 499, image: arrival1, stock: 'in', type: 'hoodies', newness: 1, bestSelling: 20 },
-  { id: 2, name: "Cocoa Short V-neck Kurti", oldPrice: 1499, newPrice: 699, image: arrival2, stock: 'in', type: 'coats', newness: 2, bestSelling: 15 },
-  { id: 3, name: "Classic Tee", oldPrice: 899, newPrice: 399, image: arrival3, stock: 'in', type: 'tees', newness: 3, bestSelling: 10 },
-  { id: 4, name: "Pink Floral Kurti", oldPrice: 1299, newPrice: 499, image: arrival1, stock: 'in', type: 'hoodies', newness: 4, bestSelling: 5 },
-  { id: 5, name: "Blue Denim Jacket", oldPrice: 1999, newPrice: 999, image: arrival2, stock: 'in', type: 'coats', newness: 5, bestSelling: 30 },
-  { id: 6, name: "White Summer Dress", oldPrice: 1599, newPrice: 799, image: arrival3, stock: 'out', type: 'tees', newness: 6, bestSelling: 2 },
-  { id: 7, name: "Embroidered Top", oldPrice: 1299, newPrice: 599, image: arrival1, stock: 'in', type: 'hoodies', newness: 7, bestSelling: 8 },
-  { id: 8, name: "Black Parka", oldPrice: 2499, newPrice: 1299, image: arrival2, stock: 'in', type: 'coats', newness: 8, bestSelling: 12 },
-  { id: 9, name: "Grey Sweatshirt", oldPrice: 1199, newPrice: 599, image: arrival3, stock: 'in', type: 'tees', newness: 9, bestSelling: 18 },
-  { id: 10, name: "Silk Kurta", oldPrice: 2999, newPrice: 1499, image: arrival1, stock: 'out', type: 'hoodies', newness: 10, bestSelling: 25 },
-];
-
 const Collection: React.FC = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   const [searchParams] = useSearchParams();
   const typeFilter = searchParams.get('type');
   const searchFilter = searchParams.get('search');
@@ -39,8 +26,39 @@ const Collection: React.FC = () => {
   const [availability, setAvailability] = useState('all');
   const [sortBy, setSortBy] = useState('default');
 
+  
+
+  const BASE_URL = "https://aurazy-backend-2.onrender.com";
+    
+
+
+
+
+
+
+
+
+
+
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const { data } = await fetchProducts();
+        setProducts(data);
+      } catch (err) {
+        setError('Failed to load products');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
   const filteredProducts = useMemo(() => {
-    let result = [...PRODUCTS];
+    let result = [...products];
 
     if (typeFilter) {
       result = result.filter(p => p.type === typeFilter);
@@ -76,7 +94,10 @@ const Collection: React.FC = () => {
     }
 
     return result;
-  }, [availability, sortBy, typeFilter, searchFilter]);
+  }, [products, availability, sortBy, typeFilter, searchFilter]);
+
+  if (loading) return <div className="section__container">Loading products...</div>;
+  if (error) return <div className="section__container">{error}</div>;
 
   return (
     <section className="section__container collection__container">
@@ -120,20 +141,39 @@ const Collection: React.FC = () => {
       </div>
 
       <div className="product__grid">
-        {filteredProducts.map(product => (
-          <div className="product__card" key={product.id}>
-            <Link to={`/product/${product.id}`}>
-              <img src={product.image} alt={product.name} />
-            </Link>
-            <h4>{product.name}</h4>
-            <p><span className="old">Rs. {product.oldPrice}</span> Rs. {product.newPrice}</p>
-            <Link to={`/product/${product.id}`} className="btn">Choose Options</Link>
-          </div>
-        ))}
+        {filteredProducts.length === 0 ? (
+          <p>No products found matching your criteria.</p>
+        ) : (
+          filteredProducts.map(product => (
+            <div className="product__card" key={product._id}>
+              <Link to={`/product/${product._id}`} className="product__image__container">
+
+
+<img
+  src={
+    product.image.startsWith("http")
+      ? product.image
+      : `${BASE_URL}${product.image}`
+  }
+  alt={product.name}
+/>
+
+
+              </Link>
+              <div className="product__details">
+                <h4>{product.name}</h4>
+                <div className="price__container">
+                  <span className="old">Rs. {product.oldPrice}</span>
+                  <span className="new">Rs. {product.newPrice}</span>
+                </div>
+                <Link to={`/product/${product._id}`} className="btn">Choose Options</Link>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </section>
   );
 };
 
 export default Collection;
-export { PRODUCTS };

@@ -9,13 +9,19 @@ import ProductDetail from './pages/ProductDetail';
 import Contact from './pages/Contact';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Checkout from './pages/Checkout';
+import PaymentSuccess from './pages/PaymentSuccess';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminOrders from './pages/AdminOrders';
 import Privacy from './pages/Legal/Privacy';
 import Terms from './pages/Legal/Terms';
 import Refund from './pages/Legal/Refund';
 import Shipping from './pages/Legal/Shipping';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+
+
 import './App.css';
 
 const App: React.FC = () => {
@@ -35,6 +41,10 @@ const App: React.FC = () => {
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/orders" element={<AdminOrders />} />
+                <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/legal/privacy" element={<Privacy />} />
                 <Route path="/legal/terms" element={<Terms />} />
                 <Route path="/legal/refund" element={<Refund />} />
@@ -49,4 +59,5 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+export default App;  
+
